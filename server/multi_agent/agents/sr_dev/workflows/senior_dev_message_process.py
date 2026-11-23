@@ -16,7 +16,7 @@ def senior_dev_message_process(*, session, user, input_type, text='', choice='',
     def resolve_text_and_payload():
         payload = {}
         if input_type == SeniorDevMessage.InputType.AUDIO:
-            raise ValueError('audio input is not supported by the Ollama-only agent stack')
+            raise ValueError('audio input is not supported by the LLM agent stack')
         if input_type == SeniorDevMessage.InputType.CHOICE:
             payload['choice_payload'] = choice_payload or {}
             return str(choice or text or '').strip(), payload

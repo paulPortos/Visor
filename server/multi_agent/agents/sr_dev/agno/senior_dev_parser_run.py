@@ -1,10 +1,10 @@
 from agno.agent import Agent
-from agno.models.ollama import Ollama
+from agno.models.google import Gemini
 import json
 
 from django.conf import settings
 
-from multi_agent.agents.ollama_agent_run_with_retry import ollama_agent_run_with_retry
+from multi_agent.agents.llm_agent_run_with_retry import llm_agent_run_with_retry
 from multi_agent.agents.sr_dev.prompts.senior_dev_parser_instructions import senior_dev_parser_instructions
 from multi_agent.agents.sr_dev.schemas import SeniorDevParserOutput
 
@@ -134,10 +134,9 @@ def senior_dev_parser_run(*, session, user_message, assistant_text, tool_call_su
 
     agent = Agent(
         name='Senior Dev Structured Parser',
-        model=Ollama(
+        model=Gemini(
             id=settings.SR_DEV_AGENT_MODEL,
-            host=settings.OLLAMA_HOST,
-            api_key=settings.OLLAMA_API_KEY,
+            api_key=settings.GEMINI_API_KEY,
         ),
         output_schema=SeniorDevParserOutput,
         tools=[],
@@ -155,5 +154,5 @@ def senior_dev_parser_run(*, session, user_message, assistant_text, tool_call_su
         sort_keys=True,
         default=str,
     )
-    response = ollama_agent_run_with_retry(agent, prompt, agent_name='Senior Dev Structured Parser')
+    response = llm_agent_run_with_retry(agent, prompt, agent_name='Senior Dev Structured Parser')
     return normalize_output(getattr(response, 'content', response))

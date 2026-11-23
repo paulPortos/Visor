@@ -1,11 +1,11 @@
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" for generating GITHUB_TOKEN_ENCRYPTION_KEY
 
-Set Ollama Cloud credentials:
+Set Google Gemini credentials:
 
 	# Linux/macOS
-	export OLLAMA_API_KEY=your_ollama_cloud_key
+	export GEMINI_API_KEY=your_google_api_key
 	# Windows (PowerShell)
-	$env:OLLAMA_API_KEY="your_ollama_cloud_key"
+	$env:GEMINI_API_KEY="your_google_api_key"
 
 Run the API with WebSocket support (port 8080 for WS):
 

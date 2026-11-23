@@ -45,12 +45,10 @@ __pycache__/
 build/
 dist/
 
-# Django / Database
+# Django
 *.log
 media/
 staticfiles/
-db.sqlite3
-*.sqlite3
 
 # Testing / tooling caches
 .pytest_cache/

@@ -1,8 +1,8 @@
 from agno.agent import Agent
-from agno.models.ollama import Ollama
+from agno.models.google import Gemini
 from django.conf import settings
 
-from multi_agent.agents.ollama_agent_run_with_retry import ollama_agent_run_with_retry
+from multi_agent.agents.llm_agent_run_with_retry import llm_agent_run_with_retry
 from multi_agent.agents.sr_dev.prompts.senior_dev_agent_instructions import senior_dev_agent_instructions
 from multi_agent.agents.sr_dev.prompts.senior_dev_session_memory_context_build import (
     senior_dev_session_memory_context_build,
@@ -11,10 +11,9 @@ from multi_agent.agents.sr_dev.prompts.senior_dev_session_memory_context_build i
 
 def senior_dev_agent_run(*, session, user_message, tools):
     """Executes the Senior Dev agent to process messages with repository tool access."""
-    model = Ollama(
+    model = Gemini(
         id=settings.SR_DEV_AGENT_MODEL,
-        host=settings.OLLAMA_HOST,
-        api_key=settings.OLLAMA_API_KEY,
+        api_key=settings.GEMINI_API_KEY,
     )
 
     agent = Agent(
@@ -35,5 +34,5 @@ def senior_dev_agent_run(*, session, user_message, tools):
         f'{senior_dev_session_memory_context_build(session=session, before_message=user_message)}\n'
         f'User message:\n{user_message.text_content}'
     )
-    response = ollama_agent_run_with_retry(agent, prompt, agent_name='Senior Dev Agent')
+    response = llm_agent_run_with_retry(agent, prompt, agent_name='Senior Dev Agent')
     return str(getattr(response, 'content', response) or '').strip()

@@ -120,11 +120,11 @@ class SeniorDevAgentTests(TestCase):
         self.assertEqual(missing_commit_response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(outsider_response.status_code, status.HTTP_404_NOT_FOUND)
 
-    @override_settings(SR_DEV_AGENT_MODEL='gpt-oss:20b', OLLAMA_HOST='https://ollama.example', OLLAMA_API_KEY='test-token')
+    @override_settings(SR_DEV_AGENT_MODEL='gemini-2.0-flash', GEMINI_API_KEY='test-token')
     @patch.object(senior_dev_agent_run_module, 'senior_dev_session_memory_context_build', return_value='No prior turns.')
     @patch.object(senior_dev_agent_run_module, 'Agent')
-    @patch.object(senior_dev_agent_run_module, 'Ollama')
-    def test_senior_dev_agent_uses_configured_ollama_model(self, ollama, agent_class, memory_build):
+    @patch.object(senior_dev_agent_run_module, 'Gemini')
+    def test_senior_dev_agent_uses_configured_gemini_model(self, gemini, agent_class, memory_build):
         session = self.create_session()
         user_message = SeniorDevMessage.objects.create(
             session=session,
@@ -140,24 +140,22 @@ class SeniorDevAgentTests(TestCase):
         )
 
         self.assertEqual(result, 'Done')
-        ollama.assert_called_once_with(
-            id='gpt-oss:20b',
-            host='https://ollama.example',
+        gemini.assert_called_once_with(
+            id='gemini-2.0-flash',
             api_key='test-token',
         )
         memory_build.assert_called_once_with(session=session, before_message=user_message)
 
     @override_settings(
-        SR_DEV_AGENT_MODEL='gpt-oss:20b',
-        OLLAMA_HOST='https://ollama.example',
-        OLLAMA_API_KEY='test-token',
-        OLLAMA_AGENT_MAX_ATTEMPTS=2,
-        OLLAMA_AGENT_RETRY_DELAY_SECONDS=0,
+        SR_DEV_AGENT_MODEL='gemini-2.0-flash',
+        GEMINI_API_KEY='test-token',
+        GEMINI_AGENT_MAX_ATTEMPTS=2,
+        GEMINI_AGENT_RETRY_DELAY_SECONDS=0,
     )
     @patch.object(senior_dev_agent_run_module, 'senior_dev_session_memory_context_build', return_value='No prior turns.')
     @patch.object(senior_dev_agent_run_module, 'Agent')
-    @patch.object(senior_dev_agent_run_module, 'Ollama')
-    def test_senior_dev_agent_retries_transient_ollama_provider_failure(self, ollama, agent_class, memory_build):
+    @patch.object(senior_dev_agent_run_module, 'Gemini')
+    def test_senior_dev_agent_retries_transient_gemini_provider_failure(self, gemini, agent_class, memory_build):
         session = self.create_session()
         user_message = SeniorDevMessage.objects.create(
             session=session,
