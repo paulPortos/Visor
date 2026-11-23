@@ -16,6 +16,12 @@ load_dotenv(BASE_DIR / '.env')
 # Environment helpers
 def env(name, default=None, required=False):
     value = os.getenv(name, default)
+    file_path = os.getenv(f'{name}_FILE')
+    if value in (None, '') and file_path:
+        try:
+            value = Path(file_path).read_text().strip()
+        except OSError as exc:
+            raise ImproperlyConfigured(f'Cannot read {name}_FILE') from exc
     if required and value in (None, ''):
         raise ImproperlyConfigured(f'{name} is required')
     return value
@@ -148,6 +154,9 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Keep OAuth sessions separate from other applications hosted on the same domain.
+SESSION_COOKIE_NAME = env('DJANGO_SESSION_COOKIE_NAME', 'visor_sessionid')
 
 # Database
 DATABASE_URL = env('DATABASE_URL')

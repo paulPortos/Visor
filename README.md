@@ -6,6 +6,26 @@
 
 ---
 
+## Run with Docker
+
+Install Docker with Compose, then configure the application once:
+
+```bash
+cp .env.example .env
+```
+
+Set your GitHub OAuth credentials and Gemini API key in the root `.env`. Configure your GitHub OAuth callback as `http://localhost:3000/auth/github/callback/`.
+
+Start the complete system:
+
+```bash
+docker compose up --build -d --wait
+```
+
+Open **http://localhost:3000**. Compose runs the frontend, Django backend, PostgreSQL, and Redis, and applies migrations automatically. Application keys are generated when omitted and persisted with the database in Docker volumes.
+
+See [deployment.md](deployment.md) for configuration and deployment details.
+
 ## 📖 About The Project
 
 In the era of AI-assisted development ("vibe coding"), building applications has never been easier. Both technical and non-technical founders are shipping products at unprecedented speeds. However, this rapid pace often comes at a cost: **crucial software engineering principles like security, scalability, and long-term business viability are frequently overlooked.**
@@ -35,7 +55,7 @@ It reviews your work, asks the hard questions, and automates your agile workflow
 
 ## 🤖 The Agentic Architecture
 
-Visor utilizes a highly collaborative multi-agent system powered by the **Agno** agentic framework and **Ollama**:
+Visor utilizes a highly collaborative multi-agent system powered by the **Agno** agentic framework and **Google Gemini**:
 1. **Senior Dev Agent:** Your technical gatekeeper. Inspects commits, interrogates implementation details, and enforces engineering standards.
 2. **Project Manager (PM) Agent:** The organizer. Takes technical findings from the Senior Dev and translates them into scoped, assignable tasks.
 3. **Scrum Agent:** The facilitator. Automates the agile lifecycle, handles dynamic priority ranking, and manages team meetings and notifications.
@@ -55,7 +75,7 @@ Visor utilizes a highly collaborative multi-agent system powered by the **Agno**
 
 **AI & Agents**
 - Agno (Agentic Framework)
-- Ollama (LLM/Agent Provider)
+- Google Gemini (LLM/Agent Provider)
 
 **Authentication**
 - GitHub OAuth

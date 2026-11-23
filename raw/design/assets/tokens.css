@@ -1,0 +1,49 @@
+/* Visor UI tokens. Copy or map these into the existing client styling system when applying the skill. */
+:root {
+  color-scheme: light;
+
+  --color-cream: #f8f4ea;
+  --color-cream-raised: #fffcf5;
+  --color-cream-muted: #eee6da;
+  --color-ink: #191817;
+  --color-ink-hover: #34312d;
+  --color-text-muted: #686159;
+  --color-burnt-orange: #b94726;
+  --color-burnt-orange-hover: #9c3b1f;
+  --color-burnt-orange-soft: #f5e4db;
+  --color-border: #d8cebf;
+  --color-control-border: #8b8073;
+
+  --color-canvas: var(--color-cream);
+  --color-surface: var(--color-cream-raised);
+  --color-text: var(--color-ink);
+  --color-primary: var(--color-burnt-orange);
+  --color-primary-hover: var(--color-burnt-orange-hover);
+  --color-primary-text: var(--color-cream-raised);
+  --color-secondary: var(--color-ink);
+  --color-secondary-hover: var(--color-ink-hover);
+  --color-secondary-text: var(--color-cream-raised);
+  --color-focus-ring: var(--color-burnt-orange);
+
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-code: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-control: 0.625rem;
+  --radius-card: 1rem;
+  --radius-overlay: 1.25rem;
+  --shadow-overlay: 0 12px 32px rgb(25 24 23 / 12%);
+
+  --motion-fast: 140ms;
+  --motion-standard: 200ms;
+  --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

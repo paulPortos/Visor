@@ -1,8 +1,10 @@
-import secrets
 from urllib.parse import urlencode
 
 from django.conf import settings
 from django.http import HttpResponseRedirect
+from django.utils.crypto import constant_time_compare
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -18,6 +20,7 @@ from users.services import get_tokens_for_user, user_create_or_update_from_githu
 from users.views.constants import GITHUB_OAUTH_STATE_SESSION_KEY
 
 
+@method_decorator(never_cache, name='dispatch')
 class GitHubCallbackView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -25,11 +28,12 @@ class GitHubCallbackView(APIView):
     def get(self, request):
         code = request.query_params.get('code')
         state = request.query_params.get('state')
-        expected_state = request.session.pop(GITHUB_OAUTH_STATE_SESSION_KEY, None)
-        request.session.modified = True
+        expected_state = request.session.get(GITHUB_OAUTH_STATE_SESSION_KEY)
 
-        if not expected_state or not state or not secrets.compare_digest(expected_state, state):
+        if not expected_state or not state or not constant_time_compare(expected_state, state):
             raise AuthenticationFailed('Invalid GitHub OAuth state')
+        # Consume a matching state once, while keeping valid attempts intact on mismatch.
+        request.session.pop(GITHUB_OAUTH_STATE_SESSION_KEY)
         if request.query_params.get('error'):
             detail = request.query_params.get('error_description') or request.query_params['error']
             raise ValidationError({'detail': detail})

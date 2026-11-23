@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visor UI Design"
+  short_description: "Visor UI in cream, ink black, and burnt orange"
+  default_prompt: "Use $design from raw/design/SKILL.md to build or refine this Visor interface using the cream, ink black, and burnt orange design system."

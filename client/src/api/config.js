@@ -1,8 +1,9 @@
 const trimTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
 const trimSlashes = (value) => String(value || '').replace(/^\/+|\/+$/g, '');
 
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const API_BASE_URL = trimTrailingSlash(
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  configuredApiBaseUrl === '/' ? window.location.origin : configuredApiBaseUrl,
 );
 export const API_VERSION = trimSlashes(import.meta.env.VITE_API_VERSION || 'v1');
 export const API_ROOT = `${API_BASE_URL}/api/${API_VERSION}`;

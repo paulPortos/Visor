@@ -1,123 +1,99 @@
 # Deployment Guide
 
-Deploy Visor as a Python web service and a static frontend, backed by PostgreSQL and Redis. The steps below apply to managed platforms, virtual machines, or container-based infrastructure.
+Visor runs as four services: a React frontend served by Nginx, a Django ASGI backend, PostgreSQL, and Redis. Docker Compose builds and starts the complete system.
 
-## 1. Provision services
+## 1. Configure the application
 
-| Component | Requirement |
+Install Docker with Compose v2.24 or newer. From the repository root:
+
+```bash
+cp .env.example .env
+```
+
+Set these credentials in the root `.env`:
+
+| Variable | Purpose |
 | --- | --- |
-| Backend | Python runtime compatible with `server/requirements.txt`, with HTTP and WebSocket support |
-| Frontend | Node.js build environment and static hosting |
-| Database | PostgreSQL reachable from the backend |
-| Channel layer | Redis reachable from all backend instances |
-| Public endpoints | HTTPS for the frontend and backend, with WSS support for WebSockets |
+| `GITHUB_CLIENT_ID` | GitHub OAuth application client ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth application client secret |
+| `GEMINI_API_KEY` | Senior Dev and Project Manager agents |
+| `GOOGLE_API_KEY` | Scrum Live; defaults to `GEMINI_API_KEY` when blank |
 
-The examples use `app.example.com` for the frontend and `api.example.com` for the backend. Replace these with your deployment's hostnames. Allow backend outbound connections to GitHub, Google Gemini, and any enabled email service.
+Configure the GitHub OAuth application's homepage as `http://localhost:3000` and callback as `http://localhost:3000/auth/github/callback/`.
 
-## 2. Configure the backend
+Leave `DJANGO_SECRET_KEY` and `GITHUB_TOKEN_ENCRYPTION_KEY` blank to generate persistent keys on first startup. When restoring an existing database, supply the original keys. Optional model and runtime settings are listed in [.env.example](.env.example) and [server/env.example](server/env.example).
 
-Set the following environment variables on the backend service. Use the database provider's PostgreSQL connection URL and TLS requirements.
+Compose reads the root `.env`. The native development files `server/.env` and `client/.env.local` are excluded from Docker images.
 
-```dotenv
-DJANGO_SECRET_KEY=<generated-secret>
-DJANGO_DEBUG=False
-DJANGO_ALLOWED_HOSTS=api.example.com
-FRONTEND_URL=https://app.example.com
-CORS_ALLOWED_ORIGINS=https://app.example.com
-
-DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<database>
-DATABASE_SSL_REQUIRE=True
-REDIS_URL=redis://<host>:6379/0
-
-GITHUB_CLIENT_ID=<oauth-client-id>
-GITHUB_CLIENT_SECRET=<oauth-client-secret>
-GITHUB_CALLBACK_URL=https://api.example.com/auth/github/callback/
-GITHUB_TOKEN_ENCRYPTION_KEY=<generated-fernet-key>
-
-GEMINI_API_KEY=<google-api-key>
-GOOGLE_API_KEY=<google-api-key>
-```
-
-`GEMINI_API_KEY` is used by the Senior Dev and Project Manager agents; `GOOGLE_API_KEY` is used by Scrum Live. Both may use the same credential if it has access to the required models. Configure `SR_DEV_AGENT_MODEL` and `PROJECT_MANAGER_AGENT_MODEL` for models available to your account; Scrum Live currently sets its model in `server/scrum/consumers.py`.
-
-Set `DATABASE_SSL_REQUIRE` according to your database's TLS policy. Use the Redis connection URL supplied by your service, including authentication and `rediss://` when TLS is required. Redis provides a shared channel layer across backend processes.
-
-After installing the backend dependencies, generate the two application keys:
+## 2. Start the system
 
 ```bash
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+docker compose up --build -d --wait
 ```
 
-Store secrets in your hosting environment's secret manager. Keep both keys stable across releases; existing encrypted GitHub tokens depend on the Fernet key. Optional email, GitHub App, and agent settings are listed in [server/env.example](server/env.example).
+Open **http://localhost:3000**.
 
-## 3. Deploy the backend
-
-Set the service working directory to `server/` and install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Run database migrations once per release, before starting the new application version:
-
-```bash
-python manage.py migrate --noinput
-python manage.py check
-```
-
-Start the ASGI application with Daphne:
-
-```bash
-python -m daphne -b 0.0.0.0 -p "$PORT" config.asgi:application
-```
-
-Set `PORT` to the listening port assigned by your host. On a virtual machine, configure a process manager to keep Daphne running. Configure the host's ingress or reverse proxy to terminate HTTPS, forward HTTP and WebSocket traffic to Daphne, and allow long-lived WebSocket connections.
-
-Use `/api/v1/health/` as the service health check. It returns `204 No Content` and does not check database or external-service connectivity.
-
-## 4. Configure GitHub OAuth
-
-Create or update your GitHub OAuth application with:
-
-| Setting | Value |
+| Service | Function |
 | --- | --- |
-| Homepage URL | `https://app.example.com` |
-| Authorization callback URL | `https://api.example.com/auth/github/callback/` |
+| `frontend` | Builds the client and serves it through Nginx |
+| `backend` | Runs migrations, then serves Django HTTP and WebSockets through Daphne |
+| `postgres` | Stores application data in a persistent volume |
+| `redis` | Provides the shared Channels layer with persistent Redis storage |
 
-The callback must match `GITHUB_CALLBACK_URL`. Login starts at the backend's `/auth/github/login/` endpoint and redirects to the frontend's `/login` route after authentication.
+Startup waits for PostgreSQL and Redis to become healthy before starting the backend, then waits for the backend before starting the frontend. Nginx forwards `/api/`, `/auth/`, and `/ws/` to the backend. Database and Redis ports remain internal to the Compose network.
 
-## 5. Deploy the frontend
+The frontend uses the browser's origin for API and WebSocket connections. Changing the public hostname or port does not require rebuilding frontend URLs.
 
-Set the build working directory to `client/` and configure these build-time variables:
-
-```dotenv
-VITE_API_BASE_URL=https://api.example.com
-VITE_API_VERSION=v1
-VITE_WS_BASE_URL=
-```
-
-Leave `VITE_WS_BASE_URL` blank to derive the WebSocket URL from the API URL, or set it explicitly when WebSockets use a separate endpoint. Only public configuration belongs in `VITE_` variables.
-
-Install and build:
+## 3. Verify and operate
 
 ```bash
-npm ci
-npm run build
-```
-
-Publish `client/dist/` as the static site root. Configure the host to serve `index.html` for application routes such as `/login`, `/home`, and `/projects/1`, while serving static assets normally. Rebuild the frontend whenever its environment variables change.
-
-## 6. Verify the deployment
-
-```bash
-curl -I https://api.example.com/api/v1/health/
+docker compose ps
+curl -I http://localhost:3000/api/v1/health/
 # Expected: 204
 
-curl -i https://api.example.com/api/v1/projects/
+curl -i http://localhost:3000/api/v1/projects/
 # Expected without authentication: 401
+
+docker compose logs -f backend
 ```
 
-Open the frontend and verify GitHub login, repository import, a Senior Dev session, and Scrum Live audio and WebSocket communication. Refresh a nested frontend route to confirm routing works. Check backend logs for database, Redis, or AI-provider errors.
+Verify GitHub login, repository import, a Senior Dev session, and Scrum Live. Refresh a nested route such as `/home` to check frontend routing. The HTTP health endpoint checks application availability; it does not verify external integrations.
 
-For subsequent releases, back up PostgreSQL before schema changes, apply migrations once, deploy the backend, and publish the rebuilt frontend. Update OAuth, allowed-host, and CORS settings whenever public domains change.
+Apply code or configuration updates with:
+
+```bash
+docker compose up --build -d --wait
+```
+
+Stop the system while preserving its volumes:
+
+```bash
+docker compose down
+```
+
+PostgreSQL data, Redis data, and generated keys live in the `postgres_data`, `redis_data`, and `backend_state` volumes. Back up PostgreSQL and its application keys together before schema changes. Removing volumes deletes their data; `docker compose down -v` also removes generated keys.
+
+## 4. Deploy on a server
+
+Use the same Compose setup on a Docker host. Set these root `.env` values for your deployment:
+
+```dotenv
+APP_BIND_ADDRESS=0.0.0.0
+APP_PORT=3000
+PUBLIC_URL=https://app.example.com
+DJANGO_ALLOWED_HOSTS=app.example.com,localhost,127.0.0.1,backend
+POSTGRES_PASSWORD=<strong-database-password>
+```
+
+Place an HTTPS reverse proxy or load balancer in front of the frontend port, with support for WebSocket upgrades and long-lived connections. Update the GitHub OAuth homepage and callback to match `PUBLIC_URL`; the callback path remains `/auth/github/callback/`. `PUBLIC_URL` must not have a trailing slash. Changing `APP_PORT` locally updates the default URLs automatically.
+
+The Dockerfiles can also be built as separate images for another container platform:
+
+```bash
+docker build -t visor-backend ./server
+docker build -t visor-frontend ./client
+```
+
+On another orchestrator, configure Nginx's backend address and DNS resolver in [client/nginx.conf](client/nginx.conf), supply equivalent backend environment variables, and connect PostgreSQL and Redis. Attach persistent storage at `/var/lib/visor` for generated keys, or supply stable keys through the platform's secret manager. Run migrations once per release before starting multiple backend instances.
+
+[Compose startup dependencies](https://docs.docker.com/compose/how-tos/startup-order/) and [Nginx WebSocket proxying](https://nginx.org/en/docs/http/websocket.html) describe the service readiness and proxy configuration used here.

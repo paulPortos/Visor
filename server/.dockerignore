@@ -1,0 +1,16 @@
+.env
+.env.*
+.venv
+venv
+env
+**/__pycache__
+**/*.py[cod]
+.git
+.DS_Store
+secrets
+**/*.pem
+**/*.key
+*.log
+.pytest_cache
+.coverage
+htmlcov
