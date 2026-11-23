@@ -3,12 +3,15 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { normalizeList } from '../api/client';
 import { WS_ROOT } from '../api/config';
+import { useToast } from './ToastProvider';
 
 const ScrumLiveAgent = () => {
+  const { toast, hiddenKeys } = useToast();
   const [searchParams] = useSearchParams();
   const [projectId, setProjectId] = useState(searchParams.get('projectId') || '');
   const [projects, setProjects] = useState([]);
-  const [sessions, setSessions] = useState([]);
+  const [allSessions, setSessions] = useState([]);
+  const sessions = allSessions.filter(session => !hiddenKeys.has(`scrum-session:${session.id}`));
   const [currentSessionId, setCurrentSessionId] = useState(null);
   
   const [connected, setConnected] = useState(false);
@@ -124,20 +127,21 @@ const ScrumLiveAgent = () => {
     }
   };
 
-  const deleteSession = async (e, sessionId) => {
+  const deleteSession = (e, sessionId) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this session?")) return;
-    
-    try {
-      await api.deleteScrumSession(sessionId);
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
-      if (currentSessionId === sessionId) {
-        setCurrentSessionId(null);
-        setTranscripts([]);
-      }
-    } catch (err) {
-      console.error('Error deleting session:', err);
-      alert('Failed to delete session');
+    toast.undoable({
+      key: `scrum-session:${sessionId}`,
+      message: 'Session deleted',
+      description: `Session #${sessionId} · Undo within 8 seconds.`,
+      undoMessage: 'Session restored',
+      errorMessage: 'Couldn’t delete session',
+      commit: () => api.deleteScrumSession(sessionId),
+    });
+    if (currentSessionId === sessionId) {
+      disconnect();
+      setCurrentSessionId(null);
+      setTranscripts([]);
+      setJsonLogs([]);
     }
   };
 
@@ -174,7 +178,7 @@ const ScrumLiveAgent = () => {
   };
 
   const connect = () => {
-    if (!projectId) return alert("Please select a project first");
+    if (!projectId) return toast.info('Select a project first', { description: 'Choose a project to start your Scrum session.' });
     if (connecting || connected) return;
     
     setConnecting(true);

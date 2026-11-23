@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { AuthProvider } from './auth/AuthContext';
+import { ToastProvider } from './components/ToastProvider';
 import AuthLayout from './components/AuthLayout';
 import Layout from './components/Layout';
 import AuthLandingPage from './pages/AuthLandingPage';
@@ -19,27 +20,29 @@ import ScrumLiveAgent from './components/ScrumLiveAgent';
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AuthLayout />}>
-            <Route path="/" element={<AuthLandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
-          <Route element={<Layout />}>
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/:projectId" element={<ProjectPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/senior" element={<SeniorPage />} />
-            <Route path="/kanban" element={<KanbanPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/scrum-live" element={<ScrumLiveAgent />} />
-          </Route>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AuthLayout />}>
+              <Route path="/" element={<AuthLandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Route>
+            <Route element={<Layout />}>
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:projectId" element={<ProjectPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/senior" element={<SeniorPage />} />
+              <Route path="/kanban" element={<KanbanPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/scrum-live" element={<ScrumLiveAgent />} />
+            </Route>
 
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

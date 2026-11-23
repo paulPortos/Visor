@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
 
 export default function CalendarPage() {
+  const { toast, hiddenKeys } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState([]);
+  const [allEvents, setEvents] = useState([]);
+  const events = allEvents.filter(event => event.source !== 'event' || !hiddenKeys.has(`event:${event.id}`));
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -32,6 +35,7 @@ export default function CalendarPage() {
       setEvents(data);
     } catch (error) {
       console.error('Failed to fetch calendar events:', error);
+      toast.error('Couldn’t load calendar', { description: error.message });
     } finally {
       setLoading(false);
     }
@@ -52,20 +56,24 @@ export default function CalendarPage() {
       }
       closeModal();
       fetchEvents();
+      toast.success(editingEvent ? 'Event updated' : 'Event created');
     } catch (error) {
-      alert('Failed to save event');
+      toast.error('Couldn’t save event', { description: error.message });
     }
   };
 
-  const handleDeleteEvent = async () => {
-    if (!editingEvent || !window.confirm('Delete this event?')) return;
-    try {
-      await api.deleteEvent(editingEvent.id);
-      closeModal();
-      fetchEvents();
-    } catch (error) {
-      alert('Failed to delete event');
-    }
+  const handleDeleteEvent = () => {
+    if (!editingEvent) return;
+    const event = editingEvent;
+    toast.undoable({
+      key: `event:${event.id}`,
+      message: event.recurrence_rule ? 'Event series deleted' : 'Event deleted',
+      description: `“${event.title}” · Undo within 8 seconds.`,
+      undoMessage: 'Event restored',
+      errorMessage: 'Couldn’t delete event',
+      commit: () => api.deleteEvent(event.id),
+    });
+    closeModal();
   };
 
   const openAddModal = (date) => {

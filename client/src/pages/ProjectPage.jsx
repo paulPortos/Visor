@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { api } from '../api';
@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import Modal from '../components/Modal';
 import SectionCard from '../components/SectionCard';
 import { GitHubIcon } from '../components/Icons';
+import { useToast } from '../components/ToastProvider';
 
 const TASK_CATEGORY_OPTIONS = [
   ['vulnerability_fix', 'Vulnerability fix'],
@@ -174,12 +175,16 @@ const resolveChangedFields = (log) => {
 };
 
 export default function ProjectPage() {
+  const { toast, hiddenKeys } = useToast();
   const { projectId } = useParams();
+  const activeProjectId = useRef(projectId);
   const { user } = useAuth();
   const [project, setProject] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [allMembers, setMembers] = useState([]);
+  const members = allMembers.filter(member => !hiddenKeys.has(`member:${projectId}:${member.id}`));
   const [tasks, setTasks] = useState([]);
-  const [vulnerabilities, setVulnerabilities] = useState([]);
+  const [allVulnerabilities, setVulnerabilities] = useState([]);
+  const vulnerabilities = allVulnerabilities.filter(item => !hiddenKeys.has(`vulnerability:${projectId}:${item.id}`));
   const [auditLogs, setAuditLogs] = useState([]);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
@@ -209,8 +214,6 @@ export default function ProjectPage() {
   const [taskDraft, setTaskDraft] = useState(null);
   const [taskError, setTaskError] = useState('');
 
-  const [vulnerabilityError, setVulnerabilityError] = useState('');
-
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [memberDraft, setMemberDraft] = useState(null);
@@ -225,11 +228,14 @@ export default function ProjectPage() {
   const isOwner = Boolean(project?.creator_id && user?.id && project.creator_id === user.id);
 
   const loadAuditLogs = async () => {
+    if (activeProjectId.current !== projectId) return;
     setAuditLogError('');
     try {
       const payload = await api.listProjectAuditLogs(projectId);
+      if (activeProjectId.current !== projectId) return;
       setAuditLogs(normalizeList(payload));
     } catch (err) {
+      if (activeProjectId.current !== projectId) return;
       setAuditLogs([]);
       setAuditLogError(err.message);
     }
@@ -260,9 +266,11 @@ export default function ProjectPage() {
   };
 
   useEffect(() => {
+    activeProjectId.current = projectId;
     if (projectId) {
       loadProject();
     }
+    return () => { activeProjectId.current = null; };
   }, [projectId]);
 
   const vulnerabilityOptions = useMemo(
@@ -406,25 +414,25 @@ export default function ProjectPage() {
       setTaskModalOpen(false);
       setSelectedTask(null);
       setTaskDraft(null);
+      toast.success('Task updated');
     } catch (err) {
       setTaskError(err.message);
     }
   };
 
-  const handleDeleteVulnerability = async (vulnerability) => {
+  const handleDeleteVulnerability = (vulnerability) => {
     if (!isOwner) return;
-    setVulnerabilityError('');
-    const confirmed = window.confirm(
-      `Delete vulnerability "${vulnerability.title}"? This permanently removes it from the project.`,
-    );
-    if (!confirmed) return;
-    try {
-      await api.deleteProjectVulnerability(projectId, vulnerability.id);
-      setVulnerabilities((prev) => prev.filter((item) => item.id !== vulnerability.id));
-      loadAuditLogs();
-    } catch (err) {
-      setVulnerabilityError(err.message);
-    }
+    toast.undoable({
+      key: `vulnerability:${projectId}:${vulnerability.id}`,
+      message: 'Vulnerability deleted',
+      description: `“${vulnerability.title}” · Undo within 8 seconds.`,
+      undoMessage: 'Vulnerability restored',
+      errorMessage: 'Couldn’t delete vulnerability',
+      commit: async () => {
+        await api.deleteProjectVulnerability(projectId, vulnerability.id);
+        loadAuditLogs();
+      },
+    });
   };
 
   const openMemberModal = (member) => {
@@ -450,27 +458,30 @@ export default function ProjectPage() {
       setMemberModalOpen(false);
       setSelectedMember(null);
       setMemberDraft(null);
+      toast.success('Member updated');
     } catch (err) {
       setMemberError(err.message);
     }
   };
 
-  const handleRemoveMember = async (member) => {
+  const handleRemoveMember = (member) => {
     if (!isOwner) return;
     setMemberError('');
-    const confirmed = window.confirm(`Remove ${member.name || member.username} from this project?`);
-    if (!confirmed) return;
-    try {
-      await api.removeProjectMember(projectId, member.id);
-      setMembers((prev) => prev.filter((item) => item.id !== member.id));
-      loadAuditLogs();
-      if (selectedMember?.id === member.id) {
-        setMemberModalOpen(false);
-        setSelectedMember(null);
-        setMemberDraft(null);
-      }
-    } catch (err) {
-      setMemberError(err.message);
+    toast.undoable({
+      key: `member:${projectId}:${member.id}`,
+      message: 'Member removed',
+      description: `${member.name || member.username} · Undo within 8 seconds.`,
+      undoMessage: 'Member restored',
+      errorMessage: 'Couldn’t remove member',
+      commit: async () => {
+        await api.removeProjectMember(projectId, member.id);
+        loadAuditLogs();
+      },
+    });
+    if (selectedMember?.id === member.id) {
+      setMemberModalOpen(false);
+      setSelectedMember(null);
+      setMemberDraft(null);
     }
   };
 
@@ -625,7 +636,6 @@ export default function ProjectPage() {
 
       <section className="grid two">
         <SectionCard title="Vulnerabilities">
-          {vulnerabilityError ? <p className="subtle">{vulnerabilityError}</p> : null}
           <div className="scroll-area">
             <ul className="list">
               {vulnerabilities.map((vulnerability) => (

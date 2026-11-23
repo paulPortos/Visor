@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import SectionCard from '../components/SectionCard';
+import { useToast } from '../components/ToastProvider';
 
 const emptyProfileForm = {
   primary_role: '',
@@ -32,6 +33,7 @@ const applyDescription = (description) => ({
 });
 
 export default function ProfilePage() {
+  const { toast } = useToast();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(user || null);
@@ -106,9 +108,9 @@ export default function ProfilePage() {
       const savedDescription = await api.updateUserDescriptionMe(payload);
       setSkills(savedDescription.skills || payload.skills);
       setForm(applyDescription(savedDescription));
-      setNotice('Profile saved.');
+      toast.success('Profile saved', { description: 'Your preferences are up to date.' });
     } catch (err) {
-      setError(err.message);
+      toast.error('Couldn’t save profile', { description: err.message });
     }
   };
 

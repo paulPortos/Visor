@@ -4,8 +4,10 @@ import { normalizeList } from '../api/client';
 import SectionCard from '../components/SectionCard';
 import Modal from '../components/Modal';
 import { WS_ROOT } from '../api/config';
+import { useToast } from '../components/ToastProvider';
 
 export default function KanbanPage() {
+  const { toast } = useToast();
   const [boards, setBoards] = useState([]);
   const [selectedBoard, setSelectedBoard] = useState(null);
   const [columns, setColumns] = useState([]);
@@ -72,8 +74,9 @@ export default function KanbanPage() {
       const updatedBoard = await api.updateBoard(selectedBoard.id, { name: newName });
       setBoards(prev => prev.map(b => b.id === updatedBoard.id ? updatedBoard : b));
       setSelectedBoard(updatedBoard);
+      toast.success('Board renamed');
     } catch (err) {
-      alert('Failed to rename board: ' + err.message);
+      toast.error('Couldn’t rename board', { description: err.message });
     }
   };
 
@@ -116,8 +119,10 @@ export default function KanbanPage() {
 
     try {
       await api.moveCard(cardId, { column_id: targetColumnId, position: 1 });
+      toast.success('Card moved', { key: `card-move:${cardId}` });
     } catch (err) {
       console.error('Failed to move card:', err);
+      toast.error('Couldn’t move card', { description: err.message });
       loadBoardData(selectedBoard.id, { silent: true });
     }
   };
@@ -129,8 +134,9 @@ export default function KanbanPage() {
       const newBoard = await api.createBoard({ name });
       setBoards(prev => [...prev, newBoard]);
       setSelectedBoard(newBoard);
+      toast.success('Board created');
     } catch (err) {
-      alert('Failed to create board: ' + err.message);
+      toast.error('Couldn’t create board', { description: err.message });
     }
   };
 
@@ -145,8 +151,9 @@ export default function KanbanPage() {
       });
       setColumns(prev => [...prev, newCol]);
       setCardsByColumn(prev => ({ ...prev, [newCol.id]: [] }));
+      toast.success('Column created');
     } catch (err) {
-      alert('Failed to create column: ' + err.message);
+      toast.error('Couldn’t create column', { description: err.message });
     }
   };
 
@@ -163,8 +170,9 @@ export default function KanbanPage() {
         ...prev,
         [columnId]: [...(prev[columnId] || []), newCard]
       }));
+      toast.success('Card created');
     } catch (err) {
-      alert('Failed to create card: ' + err.message);
+      toast.error('Couldn’t create card', { description: err.message });
     }
   };
 
@@ -208,8 +216,9 @@ export default function KanbanPage() {
         };
       });
       setEditModalOpen(false);
+      toast.success('Card updated');
     } catch (err) {
-      alert('Failed to update card: ' + err.message);
+      toast.error('Couldn’t update card', { description: err.message });
     }
   };
 
@@ -221,8 +230,9 @@ export default function KanbanPage() {
     try {
       const newLabel = await api.createBoardLabel(selectedBoard.id, { name, color });
       setBoardLabels(prev => [...prev, newLabel]);
+      toast.success('Label created');
     } catch (err) {
-      alert('Failed to create label: ' + err.message);
+      toast.error('Couldn’t create label', { description: err.message });
     }
   };
 
